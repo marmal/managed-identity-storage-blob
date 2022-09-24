@@ -14,34 +14,55 @@ You need include [ManagedIdentityCredentialBuilder](https://docs.microsoft.com/e
 ## How to run 
 
 1. Run `mvn clean package` after specifying the storage account and container in [application.properties](./src/main/resources/application.properties).
-2. Install Azure CLI extension for Azure Spring Cloud by running below command.
-    ```
-    az extension add -y --source https://azureclitemp.blob.core.windows.net/spring-cloud/spring_cloud-0.1.0-py2.py3-none-any.whl
-    ```
 3. Create an instance of Azure Spring Cloud.
     ```
     az spring-cloud create -n <resource name> -g <resource group name>
+   
+    az spring create -n azsprcld -g springtest
     ```
 4. Create an app with public domain assigned.
     ```
     az spring-cloud app create -n <app name> -s <resource name> -g <resource group name> --is-public true 
+   
+    az spring app create -n azsprgapp -s azsprcld -g springtest --is-public true 
     ```
 5. Enable system-assigned managed identity for your app and take note of the principal id from the command output.
    ```
    az spring-cloud app identity assign -n <app name> -s <resource name> -g <resource group name>
+   
+   az spring app identity assign -n manid-azsprgapp -s azsprcld -g springtest 
+   
+   martinmalm@Martins-MacBook-Pro managed-identity-storage-blob % az spring app identity assign -n azsprgapp -s azsprcld -g springtest
+   Assign managed identities without "system-assigned" or "user-assigned" parameters is obsolete, will only enable system-assigned managed identity, and will not be supported in a future release.
+   Start to enable system-assigned managed identity.
+   {
+   "id": "/subscriptions/c6998809-fb9b-4cc3-944e-aa8a00d4e88c/resourceGroups/springtest/providers/Microsoft.AppPlatform/Spring/azsprcld/apps/azsprgapp",
+   "identity": {
+   "principalId": "c7c944a4-b0d7-4377-92f2-3005009a0efa",
+   "tenantId": "44991835-87d7-4239-9df6-fc667fce766e",
+   "type": "SystemAssigned",
+   "userAssignedIdentities": null
+   },
+
    ```
 6. Grant permission of Storage Account to the system-assigned managed identity.
     ```
     az role assignment create --assignee <principal-id-you-got-in-step5> --role "Storage Blob Data Contributor" --scope <resource-id-of-storage-account>
+   
+    az role assignment create --assignee c7c944a4-b0d7-4377-92f2-3005009a0efa --role "Storage Blob Data Contributor" --scope "/subscriptions/c6998809-fb9b-4cc3-944e-aa8a00d4e88c/resourceGroups/testapper_group/providers/Microsoft.Storage/storageAccounts/mamastorageaccount"
     ```
 7. Deploy app with jar.
     ```
     az spring-cloud app deploy -n <app name> -s <resource name> -g <resource group name> --jar-path ./target/asc-managed-identity-storage-blob-sample-0.1.0.jar
+   
+    az spring-cloud app deploy -n azsprgapp -s azsprcld -g springtest --jar-path ./target/asc-managed-identity-storage-blob-sample-0.1.0.jar
     ```
-8.  Verify app is running. Instances should have status `RUNNING` and discoveryStatus `UP`. 
+8.  Verify app is running. Instances should have status `RUNNING` and discoveryStatus `UP`.
     ```
     az spring-cloud app show -n <app name> -s <resource name> -g <resource group name>
-    ```
+    
+    az spring-cloud app show -n azsprgapp -s azsprcld -g springtest
+
 9. Verify sample is working. The url is fetched from previous step.
     ```
     # Upload data to blob
